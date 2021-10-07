@@ -37,7 +37,6 @@ const classExitSelector = 'ClassDeclaration[superClass.name="Task"]:exit'
 /**
  * TODO:
  * - check import for Task class;
- * - handle index access to context;
  * - handle context leaking to other methods (spread rest);
  */
 function create(context: Rule.RuleContext): Rule.RuleListener {
@@ -224,7 +223,7 @@ function visitContextSpread(node: VariableDeclarator, context: TaskRuleContext) 
     return
   }
 
-  setConsumedFromSpread(consumed, leftHand)
+  setConsumedFromSpread(consumed, leftHand, e => context.report(e))
 }
 
 function visitSimpleDepConsume(node: MemberExpression, context: TaskRuleContext) {
@@ -244,8 +243,8 @@ function visitSimpleDepConsume(node: MemberExpression, context: TaskRuleContext)
   }
 
   const prop = node.property
-  if (prop.type !== 'Identifier') {
-    // FIXME: handle me
+  if (node.computed || prop.type !== 'Identifier') {
+    context.report({ node, message: `computed properties are disallowed for "${argName}".` })
     return
   }
 
@@ -272,7 +271,7 @@ function visitExecuteMethod(
     }
 
     case 'ObjectPattern': {
-      setConsumedFromSpread(consumed, contextArg)
+      setConsumedFromSpread(consumed, contextArg, e => context.report(e))
       break
     }
   }
@@ -281,6 +280,7 @@ function visitExecuteMethod(
 function setConsumedFromSpread(
   consumedDependencies: Map<string, ESTree.Node>,
   contextSpread: ESTree.ObjectPattern,
+  report: (descriptor: Rule.ReportDescriptor) => void,
 ) {
   for (const prop of contextSpread.properties) {
     /**
@@ -290,11 +290,13 @@ function setConsumedFromSpread(
       if (prop.key.type === 'Identifier') {
         if (prop.computed) {
           /**
-           * TODO: report an error, we don't want to support such complex options here
            * @example
            * const field = 'foo'
            * const { [field]: testField } = context;
+           * // or
+           * const { ['foo']: testField } = context;
            */
+          report({ node: prop, message: 'computed properties are disallowed for "context".' })
           continue
         }
 

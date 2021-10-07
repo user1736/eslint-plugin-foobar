@@ -25,6 +25,19 @@ class MyTask extends Task<any> {
 }
 `
 
+const validSpreadRename = `
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyTask', ['foo']);
+  }
+
+  execute(context: IContext) {
+    const {foo: bar} = context;
+    console.log(bar);
+  }
+}
+`
+
 const validArrow = `
 class MyTask extends Task<any> {
   constructor() {
@@ -65,6 +78,19 @@ class MyTask extends Task<any> {
 }
 `
 
+const invalidSpreadComputed = `
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyTask', ['foo']);
+  }
+
+  execute(context: IContext) {
+    const prop = 'foo'
+    const {[prop]: foo} = context;
+  }
+}
+`
+
 const invalidArrow = `
 class MyTask extends Task<any> {
   constructor() {
@@ -79,7 +105,7 @@ class MyTask extends Task<any> {
 `
 
 export const cases = {
-  valid: [validSpreadSimple, validSpreadVariable, validArrow],
+  valid: [validSpreadSimple, validSpreadVariable, validSpreadRename, validArrow],
   invalid: [
     {
       code: invalidSpreadSimple,
@@ -92,6 +118,10 @@ export const cases = {
     {
       code: invalidArrow,
       errors: ['"bar" isn\'t listed in task dependencies.'],
+    },
+    {
+      code: invalidSpreadComputed,
+      errors: ['"foo" is redundant.', 'computed properties are disallowed for "context".'],
     },
   ],
 }
