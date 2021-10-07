@@ -1,12 +1,12 @@
 {
-  "name": "eslint-plugin-northstar",
+  "name": "eslint-plugin-foobar",
   "version": "1.0.0",
   "main": "./dist/index.js",
   "files": [
     "dist/**"
   ],
   "author": "Dmitrii Samsonov <dsamsonov@microsoft.com>",
-  "license": "MIT",
+  "license": "WTFPL",
   "scripts": {
     "build": "tsup src/index.ts --no-splitting --minify",
     "test": "ts-node src/tests/index.ts",
