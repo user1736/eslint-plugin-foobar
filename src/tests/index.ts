@@ -1,5 +1,5 @@
 import { RuleTester } from 'eslint'
-import { testRule } from '../testRule'
+import { taskRule } from '../task-rule'
 import { cases as baseCases } from './base'
 import { cases as spreadCases } from './spread-operator'
 
@@ -10,7 +10,7 @@ const ruleTester = new RuleTester({
   },
 })
 
-ruleTester.run('test-rule', testRule, {
+ruleTester.run('task-rule', taskRule, {
   valid: [...baseCases.valid, ...spreadCases.valid],
   invalid: [...baseCases.invalid, ...spreadCases.invalid],
 })

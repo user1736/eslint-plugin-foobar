@@ -1,7 +1,7 @@
-import { testRule } from './testRule'
+import { taskRule } from './task-rule'
 
 module.exports = {
   rules: {
-    'test-rule': testRule,
+    'task-rule': taskRule,
   },
 }

@@ -117,7 +117,7 @@ function create(context: Rule.RuleContext): Rule.RuleListener {
  * TODO: add rule metadata
  * @see {@link https://eslint.org/docs/developer-guide/working-with-rules}
  */
-export const testRule = { create }
+export const taskRule = { create }
 
 interface StringLiteral extends SimpleLiteral {
   value: string
