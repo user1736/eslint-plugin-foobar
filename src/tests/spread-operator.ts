@@ -104,6 +104,32 @@ class MyTask extends Task<any> {
 }
 `
 
+const invalidRest = `
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyTask', ['foo']);
+  }
+
+  execute = ({foo, bar, ...rest}: IContext) => {
+    console.log(foo);
+    console.log(bar);
+  }
+}
+`
+
+const invalidRestVariable = `
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyTask', []);
+  }
+
+  execute = (context: IContext) => {
+    const {...rest} = context;
+    console.log(rest);
+  }
+}
+`
+
 export const cases = {
   valid: [validSpreadSimple, validSpreadVariable, validSpreadRename, validArrow],
   invalid: [
@@ -121,7 +147,18 @@ export const cases = {
     },
     {
       code: invalidSpreadComputed,
-      errors: ['"foo" is redundant.', 'computed properties are disallowed for "context".'],
+      errors: ['"foo" is redundant.', 'computed properties disallowed on "context".'],
+    },
+    {
+      code: invalidRest,
+      errors: [
+        '"bar" isn\'t listed in task dependencies.',
+        'rest property disallowed on "context".',
+      ],
+    },
+    {
+      code: invalidRestVariable,
+      errors: ['rest property disallowed on "context".'],
     },
   ],
 }

@@ -37,7 +37,6 @@ const classExitSelector = 'ClassDeclaration[superClass.name="Task"]:exit'
 /**
  * TODO:
  * - check import for Task class;
- * - handle context leaking to other methods (spread rest);
  */
 function create(context: Rule.RuleContext): Rule.RuleListener {
   const ruleContext = new TaskRuleContext(context)
@@ -246,7 +245,7 @@ function visitSimpleDepConsume(node: MemberExpression, context: TaskRuleContext)
 
   const prop = node.property
   if (node.computed || prop.type !== 'Identifier') {
-    context.report({ node, message: `computed properties are disallowed for "${argName}".` })
+    context.report({ node, message: `computed properties disallowed on "${argName}".` })
     return
   }
 
@@ -285,9 +284,6 @@ function setConsumedFromSpread(
   report: (descriptor: Rule.ReportDescriptor) => void,
 ) {
   for (const prop of contextSpread.properties) {
-    /**
-     * TODO: handle rest property
-     */
     if (prop.type === 'Property') {
       if (prop.key.type === 'Identifier') {
         if (prop.computed) {
@@ -298,7 +294,7 @@ function setConsumedFromSpread(
            * // or
            * const { ['foo']: testField } = context;
            */
-          report({ node: prop, message: 'computed properties are disallowed for "context".' })
+          report({ node: prop, message: 'computed properties disallowed on "context".' })
           continue
         }
 
@@ -309,6 +305,20 @@ function setConsumedFromSpread(
           consumedDependencies.set(value, prop)
         }
       }
+    } else {
+      /**
+       * Prohibit rest property usage on context all together, to simplify leak tracking
+       *
+       * @example
+       * function execute(context) {
+       *   const {foo, ...leakingContext} = context;
+       *   doStuff(leakingContext);
+       * }
+       */
+      report({
+        node: prop,
+        message: 'rest property disallowed on "context".',
+      })
     }
   }
 }

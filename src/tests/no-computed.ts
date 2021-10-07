@@ -40,15 +40,15 @@ export const cases = {
   invalid: [
     {
       code: invalid1,
-      errors: ['computed properties are disallowed for "context".'],
+      errors: ['computed properties disallowed on "context".'],
     },
     {
       code: invalid2,
-      errors: ['computed properties are disallowed for "context".'],
+      errors: ['computed properties disallowed on "context".'],
     },
     {
       code: invalid3,
-      errors: ['computed properties are disallowed for "context".'],
+      errors: ['computed properties disallowed on "context".'],
     },
   ],
 }
