@@ -117,8 +117,11 @@ function create(context: Rule.RuleContext): Rule.RuleListener {
 }
 
 /**
- * TODO: add rule metadata
- * @see {@link https://eslint.org/docs/developer-guide/working-with-rules}
+ * Enforces following conventions for descendants of Task class:
+ * - dependency list should be defined as simple array literal;
+ * - dependency list should contain all used dependencies;
+ * - dependency list should not contain unused dependencies;
+ * - context object should not leave execute method (i.e. not leak);
  */
 export const taskRule = {
   meta: {
@@ -157,8 +160,7 @@ function visitSuperCall(node: CallExpression, context: TaskRuleContext) {
   const depsArg = node.arguments[1]
   if (!depsArg) {
     /**
-     * dependencies is an option parameter.
-     * the lack of thereof equals an empty dependency list
+     * dependencies is an option parameter - the lack of thereof equals an empty dependency list.
      */
     return
   }
