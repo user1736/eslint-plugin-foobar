@@ -7,8 +7,10 @@ Boilerplate repo with a sample eslint rule and tests.
 Given that there's a base class `Task`
 
 ```typescript
-abstract class Task<TContext extends IContext,
-  TDependency extends keyof TContext = keyof TContext> implements ITask {
+abstract class Task<
+  TContext extends IContext, 
+  TDependency extends keyof TContext = keyof TContext
+> implements ITask {
   public id: string;
   public dependencies: TDependency[];
 
@@ -31,7 +33,7 @@ enforces following conventions for all its descendants:
 - dependency list should not contain unused dependencies;
 - context object should not leave execute method i.e., not leak;
 
-## Examples
+### Examples
 
 ```typescript
 // all conventions are met
