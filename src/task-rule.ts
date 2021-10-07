@@ -152,13 +152,15 @@ function isValidDepsArg(node: Expression | SpreadElement): node is ArrayExpressi
 function visitSuperCall(node: CallExpression, context: TaskRuleContext) {
   const contextMeta = context.getMeta()
   if (!contextMeta) {
-    // FIXME: handle me
     return
   }
 
   const depsArg = node.arguments[1]
   if (!depsArg) {
-    // FIXME: handle me
+    /**
+     * dependencies is an option parameter.
+     * the lack of thereof equals an empty dependency list
+     */
     return
   }
 
@@ -178,7 +180,6 @@ function visitSuperCall(node: CallExpression, context: TaskRuleContext) {
 function visitContextLeak(node: CallExpression, context: TaskRuleContext) {
   const contextMeta = context.getMeta()
   if (!contextMeta) {
-    // FIXME: handle me
     return
   }
 
@@ -194,7 +195,9 @@ function visitContextLeak(node: CallExpression, context: TaskRuleContext) {
     callee.object.type === 'Identifier' &&
     callee.object.name === 'console'
   ) {
-    // allow console.* methods
+    /**
+     * allow console.* methods
+     */
     return
   }
 
@@ -207,7 +210,6 @@ function visitContextLeak(node: CallExpression, context: TaskRuleContext) {
 function visitContextSpread(node: VariableDeclarator, context: TaskRuleContext) {
   const contextMeta = context.getMeta()
   if (!contextMeta) {
-    // FIXME: handle me
     return
   }
 
@@ -233,7 +235,6 @@ function visitSimpleDepConsume(node: MemberExpression, context: TaskRuleContext)
 
   const contextMeta = context.getMeta()
   if (!contextMeta) {
-    // FIXME: handle me
     return
   }
 
@@ -257,7 +258,6 @@ function visitExecuteMethod(
 ) {
   const contextMeta = context.getMeta()
   if (!contextMeta) {
-    // FIXME: handle me
     return
   }
 
@@ -284,7 +284,7 @@ function setConsumedFromSpread(
 ) {
   for (const prop of contextSpread.properties) {
     /**
-     * TODO: handle rest property somehow
+     * TODO: handle rest property
      */
     if (prop.type === 'Property') {
       if (prop.key.type === 'Identifier') {

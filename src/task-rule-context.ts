@@ -22,7 +22,6 @@ export class TaskRuleContext {
   public getMeta(parent?: ClassDeclaration) {
     const classNode = parent ?? this.getClassNode()
     if (!classNode) {
-      // FIXME: handle me
       return
     }
 
