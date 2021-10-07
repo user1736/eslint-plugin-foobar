@@ -29,7 +29,7 @@ class MyTask extends Task<any> {
     super('MyTask', ['foo']);
   }
 
-  execute(context) {
+  execute(context: IContext) {
     console.log(context.foo);
   }
 }
@@ -39,7 +39,7 @@ class MyOtherTask extends Task<any> {
     super('MyOtherTask', ['baz']);
   }
   
-  execute(context) {
+  execute(context: IContext) {
     console.log(context.baz);
   }
 }
@@ -60,7 +60,7 @@ class MyTask extends Task<any> {
 const invalidSimple = `
 class MyTask extends Task<any> {
   constructor() {
-    super('MyTask', ['foo', 'bar']);
+    super('MyTask', []);
   }
   
   execute(context: IContext) {
@@ -72,10 +72,10 @@ class MyTask extends Task<any> {
 const invalidMultiClass = `
 class MyTask extends Task<any> {
   constructor() {
-    super('MyTask', ['foo', 'bar']);
+    super('MyTask', ['foo']);
   }
   
-  execute(context) {
+  execute(context: IContext) {
     console.log(context.foo);
     console.log(context.baz);
   }
@@ -83,10 +83,10 @@ class MyTask extends Task<any> {
 
 class MyOtherTask extends Task<any> {
   constructor() {
-    super('MyOtherTask', ['baz']);
+    super('MyOtherTask', []);
   }
   
-  execute(context) {
+  execute(context: IContext) {
     console.log(context.foo);
   }
 }
@@ -95,11 +95,40 @@ class MyOtherTask extends Task<any> {
 const invalidArrow = `
 class MyTask extends Task<any> {
   constructor() {
-    super('MyTask', ['foo']);
+    super('MyTask', []);
   }
   
   execute = (context: IContext) => {
     console.log(context.bar);
+  }
+}
+`
+
+const invalidDeps1 = `
+const externalDeps = ['foo'];
+
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyOtherTask', externalDeps);
+  }
+  
+  execute(context: IContext) {
+    console.log(context.foo);
+  }
+}
+`
+
+const invalidDeps2 = `
+const externalDep = 'bar';
+
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyOtherTask', ['foo', externalDep]);
+  }
+  
+  execute(context: IContext) {
+    console.log(context.foo);
+    console.log(context.bar)
   }
 }
 `
@@ -121,6 +150,21 @@ export const cases = {
     {
       code: invalidArrow,
       errors: ['"bar" isn\'t listed in task dependencies.'],
+    },
+    {
+      code: invalidDeps1,
+      errors: [
+        'dependencies must be defined as a literal.',
+        '"foo" isn\'t listed in task dependencies.',
+      ],
+    },
+    {
+      code: invalidDeps2,
+      errors: [
+        'dependencies must be defined as a literal.',
+        '"foo" isn\'t listed in task dependencies.',
+        '"bar" isn\'t listed in task dependencies.',
+      ],
     },
   ],
 }

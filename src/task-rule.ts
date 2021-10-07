@@ -12,6 +12,7 @@ import {
   SpreadElement,
   VariableDeclarator,
 } from 'estree'
+import { TaskRuleContext } from './task-rule-context'
 
 const superCallSelector =
   'ClassDeclaration[superClass.name="Task"] MethodDefinition[kind="constructor"] CallExpression[callee.type="Super"]'
@@ -27,74 +28,66 @@ const contextSpreadSelector =
   'ClassDeclaration[superClass.name="Task"] MethodDefinition[key.name="execute"] VariableDeclarator'
 const contextSpreadArrowSelector =
   'ClassDeclaration[superClass.name="Task"] ClassProperty[key.name="execute"] VariableDeclarator'
+const contextLeakSelector =
+  'ClassDeclaration[superClass.name="Task"] MethodDefinition[key.name="execute"] CallExpression'
+const contextLeakArrowSelector =
+  'ClassDeclaration[superClass.name="Task"] ClassProperty[key.name="execute"] CallExpression'
 const classExitSelector = 'ClassDeclaration[superClass.name="Task"]:exit'
 
 /**
  * TODO:
  * - check import for Task class;
  * - handle index access to context;
- * - handle context leaking to other methods;
- * - ensure that dependencies specified as a literal;
- * - report unused dependencies;
+ * - handle context leaking to other methods (spread rest);
  */
 function create(context: Rule.RuleContext): Rule.RuleListener {
-  const declaredDependencies = new WeakMap<ESTree.Node, Set<string>>()
-  const consumedDependencies = new WeakMap<ESTree.Node, Map<string, ESTree.Node>>()
-  const contextArgName = new WeakMap<ESTree.Node, string>()
+  const ruleContext = new TaskRuleContext(context)
 
   return {
     [superCallSelector](node: CallExpression) {
-      const depsArg = node.arguments[1] as ArrayExpression
-      if (!depsArg) {
-        // FIXME: handle me
-        return
-      }
-
-      const classNode = getClassNode(context)
-      if (!classNode) {
-        // FIXME: handle me
-        return
-      }
-      if (!declaredDependencies.has(classNode)) {
-        declaredDependencies.set(classNode, new Set())
-      }
-
-      for (const element of depsArg.elements) {
-        if (isStringLiteral(element)) {
-          declaredDependencies.get(classNode)!.add(element.value)
-        } else {
-          console.log('non literal dependency!')
-        }
-      }
+      visitSuperCall(node, ruleContext)
     },
 
     [contextArgSelector](node: FunctionExpression) {
-      visitExecuteMethod(node, context, contextArgName, consumedDependencies)
+      visitExecuteMethod(node, ruleContext)
     },
 
     [contextArgArrowSelector](node: ArrowFunctionExpression) {
-      visitExecuteMethod(node, context, contextArgName, consumedDependencies)
+      visitExecuteMethod(node, ruleContext)
     },
 
     [contextUseSelector](node: MemberExpression) {
-      visitSimpleDepConsume(node, context, contextArgName, consumedDependencies)
+      visitSimpleDepConsume(node, ruleContext)
     },
 
     [contextUseArrowSelector](node: MemberExpression) {
-      visitSimpleDepConsume(node, context, contextArgName, consumedDependencies)
+      visitSimpleDepConsume(node, ruleContext)
     },
 
     [contextSpreadSelector](node: VariableDeclarator) {
-      visitSpreadContext(node, context, contextArgName, consumedDependencies)
+      visitContextSpread(node, ruleContext)
     },
 
     [contextSpreadArrowSelector](node: VariableDeclarator) {
-      visitSpreadContext(node, context, contextArgName, consumedDependencies)
+      visitContextSpread(node, ruleContext)
+    },
+
+    [contextLeakSelector](node: CallExpression) {
+      visitContextLeak(node, ruleContext)
+    },
+
+    [contextLeakArrowSelector](node: CallExpression) {
+      visitContextLeak(node, ruleContext)
     },
 
     [classExitSelector](node: ClassDeclaration) {
-      const declared = declaredDependencies.get(node)
-      const consumed = consumedDependencies.get(node)
+      const contextMeta = ruleContext.getMeta(node)
+      if (!contextMeta) {
+        return
+      }
+
+      const { consumed, declared } = contextMeta
+      // FIXME: check length
       if (!consumed || !declared) {
         return
       }
@@ -104,9 +97,20 @@ function create(context: Rule.RuleContext): Rule.RuleListener {
           continue
         }
 
-        context.report({
+        ruleContext.report({
           node,
           message: `"${key}" isn't listed in task dependencies.`,
+        })
+      }
+
+      for (const [key, node] of Array.from(declared.entries())) {
+        if (consumed.has(key)) {
+          continue
+        }
+
+        ruleContext.report({
+          node,
+          message: `"${key}" is redundant.`,
         })
       }
     },
@@ -127,13 +131,71 @@ function isStringLiteral(value: Expression | SpreadElement | null): value is Str
   return value?.type === 'Literal' && typeof value?.value === 'string'
 }
 
-function visitSpreadContext(
-  node: VariableDeclarator,
-  context: Rule.RuleContext,
-  contextArgName: WeakMap<ESTree.Node, string>,
-  consumedDependencies: WeakMap<ESTree.Node, Map<string, ESTree.Node>>,
-) {
-  const contextMeta = getContextMeta(context, contextArgName, consumedDependencies)
+function isValidDepsArg(node: Expression | SpreadElement): node is ArrayExpression {
+  if (node.type !== 'ArrayExpression') {
+    return false
+  }
+
+  return node.elements.every(isStringLiteral)
+}
+
+function visitSuperCall(node: CallExpression, context: TaskRuleContext) {
+  const contextMeta = context.getMeta()
+  if (!contextMeta) {
+    // FIXME: handle me
+    return
+  }
+
+  const depsArg = node.arguments[1]
+  if (!depsArg) {
+    // FIXME: handle me
+    return
+  }
+
+  if (!isValidDepsArg(depsArg)) {
+    context.report({ node: depsArg, message: 'dependencies must be defined as a literal.' })
+    return
+  }
+
+  const { declared } = contextMeta
+  for (const element of depsArg.elements) {
+    if (isStringLiteral(element)) {
+      declared.set(element.value, element)
+    }
+  }
+}
+
+function visitContextLeak(node: CallExpression, context: TaskRuleContext) {
+  const contextMeta = context.getMeta()
+  if (!contextMeta) {
+    // FIXME: handle me
+    return
+  }
+
+  const { argName } = contextMeta
+  const leakingArg = node.arguments.find(arg => arg.type === 'Identifier' && arg.name === argName)
+  if (!leakingArg) {
+    return
+  }
+
+  const callee = node.callee
+  if (
+    callee.type === 'MemberExpression' &&
+    callee.object.type === 'Identifier' &&
+    callee.object.name === 'console'
+  ) {
+    // allow console.* methods
+    return
+  }
+
+  context.report({
+    node: leakingArg,
+    message: `leaking "${argName}" is prohibited.`,
+  })
+}
+
+function visitContextSpread(node: VariableDeclarator, context: TaskRuleContext) {
+  const contextMeta = context.getMeta()
   if (!contextMeta) {
     // FIXME: handle me
     return
@@ -153,18 +215,13 @@ function visitSpreadContext(
   setConsumedFromSpread(consumed, leftHand)
 }
 
-function visitSimpleDepConsume(
-  node: MemberExpression,
-  context: Rule.RuleContext,
-  contextArgName: WeakMap<ESTree.Node, string>,
-  consumedDependencies: WeakMap<ESTree.Node, Map<string, ESTree.Node>>,
-) {
+function visitSimpleDepConsume(node: MemberExpression, context: TaskRuleContext) {
   const obj = node.object
   if (obj.type !== 'Identifier') {
     return
   }
 
-  const contextMeta = getContextMeta(context, contextArgName, consumedDependencies)
+  const contextMeta = context.getMeta()
   if (!contextMeta) {
     // FIXME: handle me
     return
@@ -186,11 +243,9 @@ function visitSimpleDepConsume(
 
 function visitExecuteMethod(
   node: ArrowFunctionExpression | FunctionExpression,
-  context: Rule.RuleContext,
-  contextArgName: WeakMap<ESTree.Node, string>,
-  consumedDependencies: WeakMap<ESTree.Node, Map<string, ESTree.Node>>,
+  context: TaskRuleContext,
 ) {
-  const contextMeta = getContextMeta(context, contextArgName, consumedDependencies)
+  const contextMeta = context.getMeta()
   if (!contextMeta) {
     // FIXME: handle me
     return
@@ -240,39 +295,6 @@ function setConsumedFromSpread(
           consumedDependencies.set(value, prop)
         }
       }
-    }
-  }
-}
-
-function getContextMeta(
-  context: Rule.RuleContext,
-  contextArgName: WeakMap<ESTree.Node, string>,
-  consumedDependencies: WeakMap<ESTree.Node, Map<string, ESTree.Node>>,
-) {
-  const classNode = getClassNode(context)
-  if (!classNode) {
-    // FIXME: handle me
-    return
-  }
-
-  const argName = contextArgName.get(classNode)
-  const setArgName = (value: string) => contextArgName.set(classNode, value)
-
-  if (!consumedDependencies.has(classNode)) {
-    consumedDependencies.set(classNode, new Map())
-  }
-
-  const consumed = consumedDependencies.get(classNode)!
-  return { consumed, argName, setArgName }
-}
-
-function getClassNode(context: Rule.RuleContext) {
-  const ancestors = context.getAncestors()
-  for (let i = ancestors.length - 1; i > 0; i--) {
-    const node = ancestors[i]
-
-    if (node.type === 'ClassDeclaration') {
-      return node
     }
   }
 }

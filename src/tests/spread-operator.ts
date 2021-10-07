@@ -41,7 +41,7 @@ class MyTask extends Task<any> {
 const invalidSpreadSimple = `
 class MyTask extends Task<any> {
   constructor() {
-    super('MyTask', ['foo', 'bar']);
+    super('MyTask', ['foo']);
   }
 
   execute({foo, baz}: IContext) {
@@ -54,7 +54,7 @@ class MyTask extends Task<any> {
 const invalidSpreadVariable = `
 class MyTask extends Task<any> {
   constructor() {
-    super('MyTask', ['foo', 'bar']);
+    super('MyTask', ['foo']);
   }
 
   execute(context: IContext) {
@@ -68,7 +68,7 @@ class MyTask extends Task<any> {
 const invalidArrow = `
 class MyTask extends Task<any> {
   constructor() {
-    super('MyTask', ['foo']);
+    super('MyTask', []);
   }
 
   execute = (context: IContext) => {
