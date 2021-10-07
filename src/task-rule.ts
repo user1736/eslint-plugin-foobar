@@ -85,11 +85,6 @@ function create(context: Rule.RuleContext): Rule.RuleListener {
       }
 
       const { consumed, declared } = contextMeta
-      // FIXME: check length
-      if (!consumed || !declared) {
-        return
-      }
-
       for (const [key, node] of Array.from(consumed.entries())) {
         if (declared.has(key)) {
           continue
