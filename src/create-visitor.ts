@@ -110,7 +110,7 @@ function reportDependencyErrors(node: ClassDeclaration, context: TaskRuleContext
   }
 
   const { consumed, declared } = contextMeta
-  for (const [key, node] of Array.from(consumed.entries())) {
+  for (const [ key, node ] of Array.from(consumed.entries())) {
     if (declared.has(key)) {
       continue
     }
@@ -121,7 +121,7 @@ function reportDependencyErrors(node: ClassDeclaration, context: TaskRuleContext
     })
   }
 
-  for (const [key, node] of Array.from(declared.entries())) {
+  for (const [ key, node ] of Array.from(declared.entries())) {
     if (consumed.has(key)) {
       continue
     }
@@ -214,6 +214,17 @@ function visitSimpleDepConsume(node: MemberExpression, context: TaskRuleContext)
   const obj = node.object
   if (obj.type !== 'Identifier') {
     return
+  }
+
+  const parent = context.getParent();
+  if (parent.type === "AssignmentExpression" && parent.left === node) {
+    /**
+     * Skip, if member expression is left part of an assignment
+     *
+     * @example
+     * context.foo = { bar: 'baz' }
+     */
+    return;
   }
 
   const contextMeta = context.getMeta()

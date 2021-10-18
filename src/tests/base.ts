@@ -11,6 +11,18 @@ class MyTask extends Task<any> {
 }
 `
 
+const validWithAssignment = `
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyTask', []);
+  }
+  
+  execute(context: IContext) {
+    context.foo = 'bar'
+  }
+}
+`
+
 const validInvertedMethodOrder = `
 class MyTask extends Task<any> {
   execute(context: IContext) {
@@ -65,6 +77,18 @@ class MyTask extends Task<any> {
   
   execute(context: IContext) {
     console.log(context.baz);
+  }
+}
+`
+
+const invalidWithAssignment = `
+class MyTask extends Task<any> {
+  constructor() {
+    super('MyTask', []);
+  }
+  
+  execute(context: IContext) {
+    context.foo = new FooService(context.bar)
   }
 }
 `
@@ -134,11 +158,15 @@ class MyTask extends Task<any> {
 `
 
 export const cases = {
-  valid: [validSimple, validInvertedMethodOrder, validMultiClass, validArrow],
+  valid: [ validSimple, validWithAssignment, validInvertedMethodOrder, validMultiClass, validArrow ],
   invalid: [
     {
       code: invalidSimple,
-      errors: ['"baz" isn\'t listed in task dependencies.'],
+      errors: [ '"baz" isn\'t listed in task dependencies.' ],
+    },
+    {
+      code: invalidWithAssignment,
+      errors: [ '"bar" isn\'t listed in task dependencies.' ],
     },
     {
       code: invalidMultiClass,
@@ -149,7 +177,7 @@ export const cases = {
     },
     {
       code: invalidArrow,
-      errors: ['"bar" isn\'t listed in task dependencies.'],
+      errors: [ '"bar" isn\'t listed in task dependencies.' ],
     },
     {
       code: invalidDeps1,

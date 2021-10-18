@@ -40,6 +40,11 @@ export class TaskRuleContext {
     }
   }
 
+  public getParent() {
+    const ancestors = this.context.getAncestors()
+    return ancestors[ancestors.length - 1]
+  }
+
   private getClassNode() {
     const ancestors = this.context.getAncestors()
     for (let i = ancestors.length - 1; i > 0; i--) {
